@@ -30,11 +30,15 @@
     </div>
     <div>
       <button @click="snapshotBaseline" class="button button--primary">Baseline Snapshot</button>
+      <button @click="snapshotComparison" class="button button--primary">Comparision Snapshot</button>
+      <button @click="goDiff" class="button button--primary">Go Diff</button>
     </div>
 
     <div>
       <div v-for="(page, index) in pages" :key="`baseline-${page.nodeId}`">
         {{page.name}}
+        {{page.diffPercent}}
+        {{page.status}}
         <canvas :ref="el => { canvasReferences[`${page.nodeId}-baseline`] = el}" class="border"></canvas>
         <canvas :ref="el => { canvasReferences[`${page.nodeId}-comparision`] = el}" class="border"></canvas>
         <canvas :ref="el => { canvasReferences[`${page.nodeId}-diff`] = el}" class="border"></canvas>
@@ -92,26 +96,76 @@ function selectAll() {
 }
 
 dispatch("fetchPages");
+async function goDiff() {
+  pages.value.forEach((page) => {
+       const baselineCanvas = canvasReferences.value[`${page.nodeId}-baseline`]
+       const comparisionCanvas = canvasReferences.value[`${page.nodeId}-comparision`]
+       const diffCanvas = canvasReferences.value[`${page.nodeId}-diff`]
+
+        const img1Ctx = baselineCanvas.getContext("2d");
+        const img2Ctx = comparisionCanvas.getContext("2d");
+        const diffCtx = diffCanvas.getContext("2d");
+        const { width, height } = baselineCanvas;
+        diffCanvas.width = width;
+        diffCanvas.height = height;
+
+         const img1 = img1Ctx.getImageData(0, 0, width, height);
+        const img2 = img2Ctx.getImageData(0, 0, width, height);
+        const diff = diffCtx.createImageData(width, height);
+
+        const diffCount = pixelmatch(
+          img1.data,
+          img2.data,
+          diff.data,
+          width,
+          height,
+          { threshold: 0.1 }
+        );
+
+
+        diffCtx.putImageData(diff, 0, 0);
+        page.diffImage = diffCanvas.toDataURL();
+        page.diffPercent = diffCount;
+        page.status = "Done";
+  })
+
+}
 
 async function snapshotBaseline() {
   for (const pageData in pages.value) {
     const page = pages.value[pageData];
-    await draw(page);
+    await draw(page, 'baseline');
   }
 
 
 }
 
-async function draw(page) {
+async function snapshotComparison() {
+  // for (const pageData in pages.value) {
+  //   const page = pages.value[pageData];
+  //   await draw(page);
+  // }
+  dispatch("snapshotComparision")
+}
+
+async function draw(page, context = 'baseline') {
   return new Promise((resolve, reject) => {
-    const canvas = canvasReferences.value[`${page.nodeId}-baseline`]
+    const canvas = canvasReferences.value[`${page.nodeId}-${context}`]
     const baselineImage = new Image();
     baselineImage.addEventListener("load", () => {
       canvas.width = baselineImage.width;
       canvas.height = baselineImage.height;
       canvas.getContext("2d").drawImage(baselineImage, 0, 0);
     });
-    const url = URL.createObjectURL(new Blob([page.baselineImage]));
+    let url = URL.createObjectURL(new Blob([page.baselineImage]));
+        if (context === "comparision") {
+          url = URL.createObjectURL(new Blob([page.comparisionImage]));
+        }
+
+        if (context === "diff") {
+          url = URL.createObjectURL(new Blob([page.diffImage]));
+        }
+
     baselineImage.src = url
     resolve();
   });
@@ -122,6 +176,14 @@ async function draw(page) {
     });
 
 onMounted(async () => {
+   handleEvent("comparisionSnapshotsFetched", figmaData => {
+      figmaData.map(pageData => {
+        const page = pages.value.find(page => page.nodeId === pageData.nodeId)
+        page.setComparisionImage(pageData.image)
+        draw(page, 'comparision')
+      })
+     console.log('got comparisions', figmaData);
+  });
 
   // The following shows how messages from the main code can be handled in the UI code.
   handleEvent("pagesFetched", figmaData => {

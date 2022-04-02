@@ -25,6 +25,27 @@ figma.ui.onmessage = async (message) => {
 
 	}
 
+	if (message.action === 'snapshotComparision') {
+		console.log('heard snapshot comparision');
+		
+		
+
+		const pages = figma.root.children.map(async(page) => {
+			const image = await page.exportAsync()
+			return {
+				name: page.name,
+				nodeId: page.id,
+				image: image
+			}
+
+		})
+
+		const result = await Promise.all(pages)
+		dispatch('comparisionSnapshotsFetched', result)
+
+
+	}
+
 }
 
 // The following shows how messages from the UI code can be handled in the main code.
