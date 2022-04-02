@@ -1,6 +1,6 @@
 import { dispatch, handleEvent } from './codeMessageHandler';
 import pixelmatch from "pixelmatch"
-figma.showUI(__html__, { width: 500, height: 600 });
+figma.showUI(__html__, { width: 900, height: 900 });
 
 figma.ui.onmessage = async (message) => {
 	

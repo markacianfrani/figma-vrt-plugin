@@ -14,7 +14,7 @@ export interface PageI {
 	baselineImage: string | null = null
 	comparisionImage: string | null = null
 	diffImage: string | null = null
-	status = ''
+	status = 'waiting'
 	diffPercent = 0
       
       
