@@ -26,6 +26,13 @@
             </div>
           </a>
         </li>
+        <li v-for="page in pages" :key="page.nodeId">
+        <div class="checkbox">
+          <input id="uniqueId" type="checkbox" class="checkbox__box" checked>
+        <label for="uniqueId" class="checkbox__label">{{page.name}}</label>
+        </div>
+          
+        </li>
       </ul>
     </div>
     <div>
@@ -50,7 +57,6 @@
 </template>
 
 <script setup>
-
 import styles from 'figma-plugin-ds/dist/figma-plugin-ds.css'
 import pixelmatch from 'pixelmatch'
 import { PageSet } from './model/PageSet'
@@ -132,10 +138,11 @@ async function goDiff() {
 }
 
 async function snapshotBaseline() {
-  for (const pageData in pages.value) {
-    const page = pages.value[pageData];
-    await draw(page, 'baseline');
-  }
+   dispatch("snapshotBaseline")
+  // for (const pageData in pages.value) {
+  //   const page = pages.value[pageData];
+  //   await draw(page, 'baseline');
+  // }
 
 
 }
@@ -176,6 +183,13 @@ async function draw(page, context = 'baseline') {
     });
 
 onMounted(async () => {
+     handleEvent("baselineSnapshotsFetched", figmaData => {
+      figmaData.map(pageData => {
+        const page = pages.value.find(page => page.nodeId === pageData.nodeId)
+        page.setBaselineImage(pageData.image)
+        draw(page, 'baseline')
+      })
+  });
    handleEvent("comparisionSnapshotsFetched", figmaData => {
       figmaData.map(pageData => {
         const page = pages.value.find(page => page.nodeId === pageData.nodeId)
@@ -190,10 +204,11 @@ onMounted(async () => {
     console.log('fig', figmaData);
     figmaData.map(pageData => {
       const page = new Page(pageData.name, pageData.nodeId)
-      page.setBaselineImage(pageData.image)
+      // page.setBaselineImage(pageData.image)
       pageSet.addPage(page)
     })
   });
+
 
 
 
@@ -202,7 +217,7 @@ onMounted(async () => {
 </script>
 
 <style>
-@tailwind base;
+/* @tailwind base;
 @tailwind components;
-@tailwind utilities;
+@tailwind utilities; */
 </style>
