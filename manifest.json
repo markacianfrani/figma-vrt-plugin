@@ -1,8 +1,8 @@
 {
-	"name": "Figma VRT",
+	"name": "VRT",
 	"api": "1.0.0",
 	"main": "dist/code.js",
 	"ui": "dist/ui.html",
-	"id": "my-plugin-id",
+	"id": "1092477276970110390",
 	"editorType": ["figma"]
 }
