@@ -1,6 +1,6 @@
 <template>
 	<div class="">
-		<div @click="toggle" class="cursor-pointer flex items-center text-sm">
+		<div @click="toggle" class="cursor-pointer flex items-center text-xxs">
 			<div :class="[!isOpen ? 'icon--caret-right' : 'icon--caret-down']" class="icon"></div>
 
 			{{ page.name }}
@@ -20,7 +20,7 @@
 				v-if="page.status === 'done' && page.diffPercent === 0"
 				class="text-center text-gray-600 p-4"
 			>Everything looks good!</p>
-			<div :class="{ 'hidden': page.status !== 'done' && page.diffPercent > 0 }" class="p-4">
+			<div :class="{ 'hidden': (page.status !== 'done' && page.diffPercent >= 0) }" class="p-4">
 				<slot></slot>
 			</div>
 		</div>
@@ -37,7 +37,7 @@ import {
 	useSlots,
 	computed
 } from 'vue';
-import PageI from '../model/Page'
+import { PageI } from '../model/Page'
 
 const isOpen = ref(false)
 

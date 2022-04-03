@@ -8,7 +8,7 @@
       <h2 class="mt-6 text-center text-white text-xl font-semibold">Loading...</h2>
       <p class="text-center text-white">This may take a hot minute if you have a lot of pages.</p>
     </div>
-    
+
     <main class="mb-auto overflow-auto">
       <ul>
         <li v-for="page in pages" :key="page.nodeId" class="border border-b-gray-300">
@@ -32,26 +32,25 @@
     <footer class="p-6">
       <div class="flex items-center">
         <button
-          @click="snapshotBaseline"
+          @click.prevent="snapshotBaseline"
           :disabled="loading"
           class="button button--secondary"
           :class="{ 'bg-green-500 text-white': !hasBaseline }"
         >{{ !hasBaseline ? 'Take Baseline Snapshot' : 'Rerun Baseline' }}</button>
         <div class="ml-auto flex items-center">
-        <button
-          @click="snapshotComparison"
-          :disabled="loading || !hasBaseline"
-          class="text-white button button--primary mr-4"
-        >Take Snapshot</button>
+          <button
+            @click.prevent="snapshotComparison"
+            :disabled="loading || !hasBaseline"
+            class="text-white button button--primary mr-4"
+          >Take Snapshot</button>
 
-        <button
-          @click="goDiff"
-          :disabled="loading || !hasBaseline || !hasComparision"
-          class="text-white button button--primary"
-          :class="{'bg-green-500' : hasBaseline && hasComparision }"
-        >Compare Snapshots</button>
+          <button
+            @click.prevent="goDiff"
+            :disabled="loading || !hasBaseline || !hasComparision"
+            class="text-white button button--primary"
+            :class="{ 'bg-green-500': hasBaseline && hasComparision }"
+          >Compare Snapshots</button>
         </div>
-        
       </div>
     </footer>
   </div>
@@ -74,6 +73,7 @@ import {
   onBeforeUpdate,
   ref,
   reactive,
+  nextTick,
   computed
 } from 'vue';
 
@@ -88,48 +88,53 @@ const loading = ref(false)
 const hasBaseline = ref(false)
 const hasComparision = ref(false)
 
-
 dispatch("fetchPages");
 async function goDiff() {
-  await setLoading(true)
-  pages.value.map((page) => {
-    const baselineCanvas = canvasReferences.value[`${page.nodeId}-baseline`]
-    const comparisionCanvas = canvasReferences.value[`${page.nodeId}-comparision`]
-    const diffCanvas = canvasReferences.value[`${page.nodeId}-diff`]
+  setLoading(true)
 
-    const img1Ctx = baselineCanvas.getContext("2d");
-    const img2Ctx = comparisionCanvas.getContext("2d");
-    const diffCtx = diffCanvas.getContext("2d");
-    const { width, height } = baselineCanvas;
-    diffCanvas.width = width;
-    diffCanvas.height = height;
+  Promise.all(
+    pages.value.map(async (page) => {
+      const baselineCanvas = canvasReferences.value[`${page.nodeId}-baseline`]
+      const comparisionCanvas = canvasReferences.value[`${page.nodeId}-comparision`]
+      const diffCanvas = canvasReferences.value[`${page.nodeId}-diff`]
 
-    const img1 = img1Ctx.getImageData(0, 0, width, height);
-    const img2 = img2Ctx.getImageData(0, 0, width, height);
-    const diff = diffCtx.createImageData(width, height);
+      const img1Ctx = baselineCanvas.getContext("2d");
+      const img2Ctx = comparisionCanvas.getContext("2d");
+      const diffCtx = diffCanvas.getContext("2d");
+      const { width, height } = baselineCanvas;
+      diffCanvas.width = width;
+      diffCanvas.height = height;
 
-    const diffCount = pixelmatch(
-      img1.data,
-      img2.data,
-      diff.data,
-      width,
-      height,
-      { threshold: 0.1 }
-    );
+      const img1 = img1Ctx.getImageData(0, 0, width, height);
+      const img2 = img2Ctx.getImageData(0, 0, width, height);
+      const diff = diffCtx.createImageData(width, height);
+
+      const diffCount = pixelmatch(
+        img1.data,
+        img2.data,
+        diff.data,
+        width,
+        height,
+        { threshold: 0.1 }
+      );
 
 
-    diffCtx.putImageData(diff, 0, 0);
-    page.diffImage = diffCanvas.toDataURL();
-    page.diffPercent = diffCount;
-    page.status = "done";
+      diffCtx.putImageData(diff, 0, 0);
+      page.diffImage = diffCanvas.toDataURL();
+      page.diffPercent = diffCount;
+      page.status = "done";
+      Promise.resolve()
+    })
+  )
+
+  setTimeout(() => {
     setLoading(false)
-  })
+  }, 0);
 
 }
 
 async function setLoading(value) {
   return new Promise((resolve, reject) => {
-    console.log('setting loading', value);
     loading.value = value
     resolve()
   })
@@ -182,30 +187,22 @@ onMounted(async () => {
     hasBaseline.value = true
     setLoading(false)
   });
-  handleEvent("comparisionSnapshotsFetched", figmaData => {
-    const result = figmaData.map((pageData) => {
+  handleEvent("comparisionSnapshotsFetched", async (figmaData) => {
+    figmaData.map((pageData) => {
       const page = pages.value.find(page => page.nodeId === pageData.nodeId)
       page.setComparisionImage(pageData.image)
       draw(page, 'comparision')
-
     })
     hasComparision.value = true
     setLoading(false)
   });
 
-  // The following shows how messages from the main code can be handled in the UI code.
   handleEvent("pagesFetched", figmaData => {
-    console.log('fig', figmaData);
     figmaData.map(pageData => {
       const page = new Page(pageData.name, pageData.nodeId)
-      // page.setBaselineImage(pageData.image)
       pageSet.addPage(page)
     })
   });
-
-
-
-
 })
 
 </script>
