@@ -1,5 +1,14 @@
 <template>
   <div id="ui" class="h-screen flex flex-col justify-between">
+    <div
+      v-if="loading"
+      class="fixed top-0 left-0 right-0 bottom-0 w-full h-screen z-50 overflow-hidden bg-gray-700 opacity-75 flex flex-col items-center justify-center"
+    >
+      <div class="text-white icon icon--spinner icon--spin"></div>
+      <h2 class="mt-6 text-center text-white text-xl font-semibold">Loading...</h2>
+      <p class="text-center text-white">This may take a hot minute if you have a lot of pages.</p>
+    </div>
+    
     <main class="mb-auto overflow-auto">
       <ul>
         <li v-for="page in pages" :key="page.nodeId" class="border border-b-gray-300">
@@ -19,13 +28,30 @@
           </page-item>
         </li>
       </ul>
-
     </main>
     <footer class="p-6">
       <div class="flex items-center">
-        <button @click="snapshotBaseline" class="button button--secondary">Baseline Snapshot</button>
-        <button @click="snapshotComparison" class="button button--primary">Comparision Snapshot</button>
-        <button @click="goDiff" class="button button--primary">Go Diff</button>
+        <button
+          @click="snapshotBaseline"
+          :disabled="loading"
+          class="button button--secondary"
+          :class="{ 'bg-green-500 text-white': !hasBaseline }"
+        >{{ !hasBaseline ? 'Take Baseline Snapshot' : 'Rerun Baseline' }}</button>
+        <div class="ml-auto flex items-center">
+        <button
+          @click="snapshotComparison"
+          :disabled="loading || !hasBaseline"
+          class="text-white button button--primary mr-4"
+        >Take Snapshot</button>
+
+        <button
+          @click="goDiff"
+          :disabled="loading || !hasBaseline || !hasComparision"
+          class="text-white button button--primary"
+          :class="{'bg-green-500' : hasBaseline && hasComparision }"
+        >Compare Snapshots</button>
+        </div>
+        
       </div>
     </footer>
   </div>
@@ -59,12 +85,14 @@ let pages = computed(() => {
 })
 
 const loading = ref(false)
-
+const hasBaseline = ref(false)
+const hasComparision = ref(false)
 
 
 dispatch("fetchPages");
 async function goDiff() {
-  pages.value.forEach((page) => {
+  await setLoading(true)
+  pages.value.map((page) => {
     const baselineCanvas = canvasReferences.value[`${page.nodeId}-baseline`]
     const comparisionCanvas = canvasReferences.value[`${page.nodeId}-comparision`]
     const diffCanvas = canvasReferences.value[`${page.nodeId}-diff`]
@@ -93,26 +121,27 @@ async function goDiff() {
     diffCtx.putImageData(diff, 0, 0);
     page.diffImage = diffCanvas.toDataURL();
     page.diffPercent = diffCount;
-    page.status = "Done";
+    page.status = "done";
+    setLoading(false)
   })
 
 }
 
+async function setLoading(value) {
+  return new Promise((resolve, reject) => {
+    console.log('setting loading', value);
+    loading.value = value
+    resolve()
+  })
+}
+
 async function snapshotBaseline() {
+  setLoading(true)
   dispatch("snapshotBaseline")
-  // for (const pageData in pages.value) {
-  //   const page = pages.value[pageData];
-  //   await draw(page, 'baseline');
-  // }
-
-
 }
 
 async function snapshotComparison() {
-  // for (const pageData in pages.value) {
-  //   const page = pages.value[pageData];
-  //   await draw(page);
-  // }
+  setLoading(true)
   dispatch("snapshotComparision")
 }
 
@@ -143,12 +172,6 @@ onBeforeUpdate(() => {
   canvasReferences.value = [];
 });
 
-// async function setComparisions(data) {
-//   return new Promise((resolve, reject) => {
-
-//   })
-// }
-
 onMounted(async () => {
   handleEvent("baselineSnapshotsFetched", figmaData => {
     figmaData.map(pageData => {
@@ -156,6 +179,8 @@ onMounted(async () => {
       page.setBaselineImage(pageData.image)
       draw(page, 'baseline')
     })
+    hasBaseline.value = true
+    setLoading(false)
   });
   handleEvent("comparisionSnapshotsFetched", figmaData => {
     const result = figmaData.map((pageData) => {
@@ -164,11 +189,8 @@ onMounted(async () => {
       draw(page, 'comparision')
 
     })
-
-    // await Promise.all(result)
-
-
-    goDiff()
+    hasComparision.value = true
+    setLoading(false)
   });
 
   // The following shows how messages from the main code can be handled in the UI code.

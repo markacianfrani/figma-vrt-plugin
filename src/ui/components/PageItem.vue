@@ -1,16 +1,28 @@
 <template>
-	<div class="p-2 sm:px-6">
-		<div @click="toggle" class="cursor-pointer flex items-center justify-between">
-			<div :class="[isOpen ? 'icon--caret-right' : 'icon--caret-down']" class="icon"></div>
-			{{ page.name }}
-			<span class="ml-auto">{{ page.status }}</span>
+	<div class="">
+		<div @click="toggle" class="cursor-pointer flex items-center text-sm">
+			<div :class="[!isOpen ? 'icon--caret-right' : 'icon--caret-down']" class="icon"></div>
 
-			<span v-if="page.status !== 'waiting'" :class="[ page.diffPercent > 0 ? 'bg-red-500' : 'bg-green-500']" class="py px-2 text-xxs text-white rounded">
-			{{ page.diffPercent }}
-			</span>
+			{{ page.name }}
+			<span
+				v-if="page.status !== 'waiting'"
+				:class="[page.diffPercent > 0 ? 'bg-red-500' : 'bg-green-500']"
+				class="ml-auto py px-2 mr-4 text-xxs text-white rounded"
+			>{{ page.diffPercent > 0 ? 'FAIL' : 'PASS' }}</span>
 		</div>
-		<div :class="{ 'hidden': isOpen }" class="border">
-			<slot></slot>
+		<div :class="{ 'hidden': !isOpen }" class>
+			<p
+				v-if="page.status !== 'done'"
+				class="text-center text-gray-600 p-4"
+			>Go forth and take a comparision snapshot. If there are any regressions, they will be displayed here.</p>
+
+			<p
+				v-if="page.status === 'done' && page.diffPercent === 0"
+				class="text-center text-gray-600 p-4"
+			>Everything looks good!</p>
+			<div :class="{ 'hidden': page.status !== 'done' && page.diffPercent > 0 }" class="p-4">
+				<slot></slot>
+			</div>
 		</div>
 	</div>
 </template>
@@ -22,11 +34,12 @@ import {
 	onBeforeUpdate,
 	ref,
 	reactive,
+	useSlots,
 	computed
 } from 'vue';
 import PageI from '../model/Page'
 
-const isOpen = ref(true)
+const isOpen = ref(false)
 
 function toggle() {
 	isOpen.value = !isOpen.value
