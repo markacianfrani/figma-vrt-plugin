@@ -1,14 +1,16 @@
 <template>
-	<div class="">
+	<div class>
 		<div @click="toggle" class="cursor-pointer flex items-center text-xxs">
 			<div :class="[!isOpen ? 'icon--caret-right' : 'icon--caret-down']" class="icon"></div>
-
 			{{ page.name }}
-			<span
-				v-if="page.status !== 'waiting'"
-				:class="[page.diffPercent > 0 ? 'bg-red-500' : 'bg-green-500']"
-				class="ml-auto py px-2 mr-4 text-xxs text-white rounded"
-			>{{ page.diffPercent > 0 ? 'FAIL' : 'PASS' }}</span>
+			<div class="ml-auto mr-4">
+				<span v-if="page.status !== 'done'" class="text-gray-400">{{ page.status }}</span>
+				<span
+					v-if="page.status === 'done'"
+					:class="[page.diffPercent > 0 ? 'bg-red-500' : 'bg-green-500']"
+					class="py px-2 text-xxs text-white rounded"
+				>{{ page.diffPercent > 0 ? 'FAIL' : 'PASS' }}</span>
+			</div>
 		</div>
 		<div :class="{ 'hidden': !isOpen }" class>
 			<p

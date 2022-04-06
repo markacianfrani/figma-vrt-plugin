@@ -84,9 +84,20 @@ let pages = computed(() => {
   return pageSet.pages
 })
 
+
+const hasBaseline = computed(() => {
+  const pagesWithBaselines = pages.value.filter(page => !page.baselineImage)
+  return pagesWithBaselines.length === 0;
+})
+
+const hasComparision = computed(() => {
+  const pagesWithBaselines = pages.value.filter(page => !page.comparisionImage)
+  return pagesWithBaselines.length === 0;
+})
+
+
 const loading = ref(false)
-const hasBaseline = ref(false)
-const hasComparision = ref(false)
+// const hasComparision = ref(false)
 
 dispatch("fetchPages");
 async function goDiff() {
@@ -141,13 +152,35 @@ async function setLoading(value) {
 }
 
 async function snapshotBaseline() {
-  setLoading(true)
-  dispatch("snapshotBaseline")
+  pages.value.map(page => {
+    page.status = 'Snapshotting Baselines...'
+  })
+
+  for (const page in pages.value) {
+    if (page % 2 === 0) {
+      await sleep(1000)
+    }
+    dispatch("snapshotBaseline", pages.value[page].nodeId)
+  }
 }
 
 async function snapshotComparison() {
-  setLoading(true)
-  dispatch("snapshotComparision")
+  pages.value.map(page => {
+    page.status = 'Snapshotting Comparisions...'
+  })
+
+  for (const page in pages.value) {
+    if (page % 2 === 0) {
+      await sleep(1000)
+    }
+    dispatch("snapshotComparision", pages.value[page].nodeId)
+  }
+
+}
+
+async function sleep(ms = 0) {
+  console.log('sleeping');
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function draw(page, context = 'baseline') {
@@ -179,22 +212,17 @@ onBeforeUpdate(() => {
 
 onMounted(async () => {
   handleEvent("baselineSnapshotsFetched", figmaData => {
-    figmaData.map(pageData => {
-      const page = pages.value.find(page => page.nodeId === pageData.nodeId)
-      page.setBaselineImage(pageData.image)
-      draw(page, 'baseline')
-    })
-    hasBaseline.value = true
-    setLoading(false)
+    const page = pages.value.find(page => page.nodeId === figmaData.nodeId)
+    page.setBaselineImage(figmaData.image)
+    page.status = 'Baseline loaded'
+    draw(page, 'baseline')
   });
+
   handleEvent("comparisionSnapshotsFetched", async (figmaData) => {
-    figmaData.map((pageData) => {
-      const page = pages.value.find(page => page.nodeId === pageData.nodeId)
-      page.setComparisionImage(pageData.image)
-      draw(page, 'comparision')
-    })
-    hasComparision.value = true
-    setLoading(false)
+    const page = pages.value.find(page => page.nodeId === figmaData.nodeId)
+    page.setComparisionImage(figmaData.image)
+    page.status = 'Comparision loaded'
+    draw(page, 'comparision')
   });
 
   handleEvent("pagesFetched", figmaData => {
@@ -202,6 +230,7 @@ onMounted(async () => {
       const page = new Page(pageData.name, pageData.nodeId)
       pageSet.addPage(page)
     })
+
   });
 })
 

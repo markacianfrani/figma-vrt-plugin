@@ -18,33 +18,24 @@ figma.ui.onmessage = async (message) => {
 
 	if (message.action === 'snapshotBaseline') {
 		
-		const pages = figma.root.children.map(async(page) => {
-			const image = await page.exportAsync()
-			return {
+		const page = await figma.root.findOne(node => node.id === message.data)
+		const image = await page.exportAsync()
+		dispatch('baselineSnapshotsFetched', {
 				name: page.name,
 				nodeId: page.id,
 				image: image
-			}
-
 		})
-
-		const result = await Promise.all(pages)
-		dispatch('baselineSnapshotsFetched', result)
 	}
 
 	if (message.action === 'snapshotComparision') {
-		const pages = figma.root.children.map(async(page) => {
-			const image = await page.exportAsync()
-			return {
+		const page = await figma.root.findOne(node => node.id === message.data)
+		const image = await page.exportAsync()
+		dispatch('comparisionSnapshotsFetched', {
 				name: page.name,
 				nodeId: page.id,
 				image: image
-			}
-
 		})
 
-		const result = await Promise.all(pages)
-		dispatch('comparisionSnapshotsFetched', result)
 	}
 
 }
