@@ -157,9 +157,9 @@ async function snapshotBaseline() {
   })
 
   for (const page in pages.value) {
-    if (page % 2 === 0) {
-      await sleep(1000)
-    }
+    // if (page % 2 === 0) {
+      await sleep(2000)
+    // }
     dispatch("snapshotBaseline", pages.value[page].nodeId)
   }
 }
@@ -179,7 +179,6 @@ async function snapshotComparison() {
 }
 
 async function sleep(ms = 0) {
-  console.log('sleeping');
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
