@@ -17,8 +17,7 @@ figma.ui.onmessage = async (message) => {
 	}
 
 	if (message.action === 'snapshotBaseline') {
-		
-		const page = await figma.root.findOne(node => node.id === message.data)
+		const page = figma.root.children.find(node => node.id === message.data)
 		const image = await page.exportAsync()
 		dispatch('baselineSnapshotsFetched', {
 				name: page.name,
@@ -28,7 +27,7 @@ figma.ui.onmessage = async (message) => {
 	}
 
 	if (message.action === 'snapshotComparision') {
-		const page = await figma.root.findOne(node => node.id === message.data)
+		const page = figma.root.children.find(node => node.id === message.data)
 		const image = await page.exportAsync()
 		dispatch('comparisionSnapshotsFetched', {
 				name: page.name,

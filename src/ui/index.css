@@ -81,6 +81,8 @@
   --size-xlarge: 48px;
   --size-xxlarge: 64px;
   --size-xxxlarge: 80px;
+
+  --color-text-secondary: rgba(0, 0, 0, 0.5);
 }
 
 body {

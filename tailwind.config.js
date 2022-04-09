@@ -7,7 +7,31 @@ module.exports = {
   ],
   important: true,
   theme: {
+
+    fontSize: {
+      xs: ['0.563rem', { lineHeight: '1rem' }],
+      sm: ['0.625rem', { lineHeight: '1rem' }],
+      base: ['0.688rem', { lineHeight: '1rem' }],
+      lg: ['0.75rem', { lineHeight: '1.75rem' }],
+      xl: ['0.813rem', { lineHeight: '1.75rem' }],
+      '2xl': ['0.875rem', { lineHeight: '2rem' }],
+      '3xl': ['15px', { lineHeight: '2.25rem' }],
+      '4xl': ['16px', { lineHeight: '2.5rem' }],
+      '5xl': ['17px', { lineHeight: '1' }],
+      '6xl': ['18px', { lineHeight: '1' }],
+      '7xl': ['19px', { lineHeight: '1' }],
+      '8xl': ['20px', { lineHeight: '1' }],
+      '9xl': ['24px', { lineHeight: '1' }],
+      '10xl': ['30px', { lineHeight: '1' }],
+      '11xl': ['40px', { lineHeight: '1' }],
+      '12xl': ['42px', { lineHeight: '1' }],
+      '13xl': ['48px', { lineHeight: '1' }],
+      '14xl': ['60px', { lineHeight: '1' }],
+    },
     extend: {
+      textColor: {
+        secondary: 'var(--color-text-secondary)'
+      },
       colors: {
         gray: {
           50: 'var(--theme-colors-gray-50, #FAFAFA)',
@@ -32,6 +56,17 @@ module.exports = {
       },
       fontSize: {
         xxs: '0.7rem',
+      },
+      spacing: {
+        '3xs': '4px',
+        '2xs': '8px',
+        'xs': '16px',
+        'sm': '24px',
+        'medium': '32px',
+        'lg' : '40px',
+        'xl' : '48px',
+        '2xl' : '64px',
+        '3xl' : '80px',
       },
       fontFamily: {
         body: ['Inter', 'sans-serif'],

@@ -1,8 +1,12 @@
 <template>
 	<div class>
-		<div @click="toggle" class="cursor-pointer flex items-center text-xxs">
-			<div :class="[!isOpen ? 'icon--caret-right' : 'icon--caret-down']" class="icon"></div>
-			{{ page.name }}
+		<div class="cursor-pointer flex items-center text-xxs">
+			<div @click="toggle" :class="[!isOpen ? 'icon--caret-right' : 'icon--caret-down']" class="icon"></div>
+			<div class="icon-button mr-2" @click.prevent="togglePageVisibility">
+				<div :class="page.isVisible ? 'icon--visible' : 'icon--hidden'" class="icon"></div>
+			</div>
+			
+			{{page.name}}
 			<div class="ml-auto mr-4">
 				<span v-if="page.status !== 'done'" class="text-gray-400">{{ page.status }}</span>
 				<span
@@ -41,14 +45,20 @@ import {
 } from 'vue';
 import { PageI } from '../model/Page'
 
+const emit = defineEmits(['selectPage'])
 const isOpen = ref(false)
 
 function toggle() {
 	isOpen.value = !isOpen.value
 }
 
+
 const props = defineProps({
-	page: PageI
+	page: PageI,
+	selected: Boolean = false
 })
 
+const togglePageVisibility = () => {
+	props.page.toggleVisibility()
+}
 </script>

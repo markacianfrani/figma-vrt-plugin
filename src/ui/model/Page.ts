@@ -6,6 +6,7 @@ export interface PageI {
 	diffImage: string | null
 	status: string
 	diffPercent: number
+	isVisible: boolean
       }
       
       export class Page implements PageI {
@@ -16,6 +17,7 @@ export interface PageI {
 	diffImage: string | null = null
 	status = 'waiting'
 	diffPercent = 0
+	isVisible = false
       
       
 	constructor(name: string, nodeId: string) {
@@ -31,6 +33,13 @@ export interface PageI {
 	  this.baselineImage = null
 	}
       
+	setVisibility(value: boolean) {
+		this.isVisible = value
+	}
+	toggleVisibility() {
+		this.isVisible = !this.isVisible
+	}
+
 	setComparisionImage(image: string) {
 	  this.comparisionImage = image
 	}

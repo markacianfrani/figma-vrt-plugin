@@ -9,6 +9,7 @@
       <p class="text-center text-white">This may take a hot minute if you have a lot of pages.</p>
     </div>
 
+<tab-strip @select-all="selectAll" @select-none="selectNone"></tab-strip>
     <main class="mb-auto overflow-auto">
       <ul>
         <li v-for="page in pages" :key="page.nodeId" class="border border-b-gray-300">
@@ -59,6 +60,7 @@
 <script setup>
 import styles from 'figma-plugin-ds/dist/figma-plugin-ds.css'
 import pixelmatch from 'pixelmatch'
+import TabStrip from './components/TabStrip.vue'
 import { PageSet } from './model/PageSet'
 import { Page } from './model/Page'
 import PageItem from './components/PageItem.vue'
@@ -86,15 +88,19 @@ let pages = computed(() => {
 
 
 const hasBaseline = computed(() => {
-  const pagesWithBaselines = pages.value.filter(page => !page.baselineImage)
+  const pagesWithBaselines = selectedPages.value.filter(page => !page.baselineImage)
   return pagesWithBaselines.length === 0;
 })
 
 const hasComparision = computed(() => {
-  const pagesWithBaselines = pages.value.filter(page => !page.comparisionImage)
+  const pagesWithBaselines = selectedPages.value.filter(page => !page.comparisionImage)
   return pagesWithBaselines.length === 0;
 })
 
+
+const selectedPages = computed(() => {
+  return pages.value.filter(page => page.isVisible)
+})
 
 const loading = ref(false)
 // const hasComparision = ref(false)
@@ -104,7 +110,7 @@ async function goDiff() {
   setLoading(true)
 
   Promise.all(
-    pages.value.map(async (page) => {
+    selectedPages.value.map(async (page) => {
       const baselineCanvas = canvasReferences.value[`${page.nodeId}-baseline`]
       const comparisionCanvas = canvasReferences.value[`${page.nodeId}-comparision`]
       const diffCanvas = canvasReferences.value[`${page.nodeId}-diff`]
@@ -144,6 +150,14 @@ async function goDiff() {
 
 }
 
+const selectAll = () => {
+  pages.value.map(page => page.setVisibility(true))
+}
+
+const selectNone = () => {
+  pages.value.map(page => page.setVisibility(false))
+}
+
 async function setLoading(value) {
   return new Promise((resolve, reject) => {
     loading.value = value
@@ -152,28 +166,30 @@ async function setLoading(value) {
 }
 
 async function snapshotBaseline() {
-  pages.value.map(page => {
+  selectedPages.value.map(page => {
     page.status = 'Snapshotting Baselines...'
   })
 
-  for (const page in pages.value) {
-    // if (page % 2 === 0) {
-      await sleep(2000)
-    // }
-    dispatch("snapshotBaseline", pages.value[page].nodeId)
+  for (const page in selectedPages.value) {
+    if (page % 2 === 0) {
+      console.log('sleeping');
+      await sleep()
+      console.log('resuming');
+    }
+    dispatch("snapshotBaseline", selectedPages.value[page].nodeId)
   }
 }
 
 async function snapshotComparison() {
-  pages.value.map(page => {
+  selectedPages.value.map(page => {
     page.status = 'Snapshotting Comparisions...'
   })
 
-  for (const page in pages.value) {
+  for (const page in selectedPages.value) {
     if (page % 2 === 0) {
-      await sleep(1000)
+      await sleep()
     }
-    dispatch("snapshotComparision", pages.value[page].nodeId)
+    dispatch("snapshotComparision", selectedPages.value[page].nodeId)
   }
 
 }
