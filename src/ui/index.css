@@ -177,9 +177,9 @@ textarea::-webkit-scrollbar-thumb {
   @apply border-none rounded-none;
 }
 
-.button {
-  @apply border border-gray-400 rounded text-gray-800 font-medium text-xs p-2;
-}
+/* .button {
+  @apply border border-gray-400 rounded font-medium text-xs p-2;
+} */
 
 .button-disabled {
   @apply border-gray-500;

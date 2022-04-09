@@ -1,15 +1,6 @@
 <template>
   <div id="ui" class="h-screen flex flex-col justify-between">
-    <div
-      v-if="loading"
-      class="fixed top-0 left-0 right-0 bottom-0 w-full h-screen z-50 overflow-hidden bg-gray-700 opacity-75 flex flex-col items-center justify-center"
-    >
-      <div class="text-white icon icon--spinner icon--spin"></div>
-      <h2 class="mt-6 text-center text-white text-xl font-semibold">Loading...</h2>
-      <p class="text-center text-white">This may take a hot minute if you have a lot of pages.</p>
-    </div>
-
-<tab-strip @select-all="selectAll" @select-none="selectNone"></tab-strip>
+    <tab-strip @select-all="selectAll" @select-none="selectNone"></tab-strip>
     <main class="mb-auto overflow-auto">
       <ul>
         <li v-for="page in pages" :key="page.nodeId" class="border border-b-gray-300">
@@ -30,15 +21,21 @@
         </li>
       </ul>
     </main>
-    <footer class="p-6">
+    <footer class="p-xs">
       <div class="flex items-center">
         <button
           @click.prevent="snapshotBaseline"
           :disabled="loading"
-          class="button button--secondary"
-          :class="{ 'bg-green-500 text-white': !hasBaseline }"
+          class="button"
+          :class="hasBaseline ? 'button--secondary' : 'button--primary'"
         >{{ !hasBaseline ? 'Take Baseline Snapshot' : 'Rerun Baseline' }}</button>
-        <div class="ml-auto flex items-center">
+        <div class="m-auto flex items-center" v-if="loading">
+            <div class="text-white icon icon--spinner icon--spin"></div>
+          Loading...
+          <span class="italic text-secondary ml-2">This may take a hot minute if you have a lot of pages.</span>
+
+        </div>
+        <div class="flex items-center" :class="{ 'ml-auto': !loading}">
           <button
             @click.prevent="snapshotComparison"
             :disabled="loading || !hasBaseline"
@@ -46,7 +43,7 @@
           >Take Snapshot</button>
 
           <button
-            @click.prevent="goDiff"
+            @click="goDiff"
             :disabled="loading || !hasBaseline || !hasComparision"
             class="text-white button button--primary"
             :class="{ 'bg-green-500': hasBaseline && hasComparision }"
@@ -80,7 +77,6 @@ import {
 } from 'vue';
 
 const canvasReferences = ref([])
-let checkedPages = reactive([])
 const pageSet = reactive(new PageSet())
 let pages = computed(() => {
   return pageSet.pages
@@ -103,51 +99,65 @@ const selectedPages = computed(() => {
 })
 
 const loading = ref(false)
-// const hasComparision = ref(false)
+
+const diffPage = (page) => {
+  return new Promise((resolve, reject) => {
+    const baselineCanvas = canvasReferences.value[`${page.nodeId}-baseline`]
+    const comparisionCanvas = canvasReferences.value[`${page.nodeId}-comparision`]
+    const diffCanvas = canvasReferences.value[`${page.nodeId}-diff`]
+
+    const img1Ctx = baselineCanvas.getContext("2d");
+    const img2Ctx = comparisionCanvas.getContext("2d");
+    const diffCtx = diffCanvas.getContext("2d");
+    const { width, height } = baselineCanvas;
+    diffCanvas.width = width;
+    diffCanvas.height = height;
+
+    const img1 = img1Ctx.getImageData(0, 0, width, height);
+    const img2 = img2Ctx.getImageData(0, 0, width, height);
+    const diff = diffCtx.createImageData(width, height);
+
+    const diffCount = pixelmatch(
+      img1.data,
+      img2.data,
+      diff.data,
+      width,
+      height,
+      { threshold: 0.1 }
+    );
+
+
+    diffCtx.putImageData(diff, 0, 0);
+    page.diffImage = diffCanvas.toDataURL();
+    page.diffPercent = diffCount;
+    page.status = "done";
+    resolve(page)
+  })
+
+}
+
+/**
+ * Double requestAnimationFrame
+ * @param {} callback 
+ */
+const waitForPaint = (callback) => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(callback)
+  })
+}
 
 dispatch("fetchPages");
-async function goDiff() {
-  setLoading(true)
+const goDiff = async () => {
+  loading.value = true
 
-  Promise.all(
-    selectedPages.value.map(async (page) => {
-      const baselineCanvas = canvasReferences.value[`${page.nodeId}-baseline`]
-      const comparisionCanvas = canvasReferences.value[`${page.nodeId}-comparision`]
-      const diffCanvas = canvasReferences.value[`${page.nodeId}-diff`]
-
-      const img1Ctx = baselineCanvas.getContext("2d");
-      const img2Ctx = comparisionCanvas.getContext("2d");
-      const diffCtx = diffCanvas.getContext("2d");
-      const { width, height } = baselineCanvas;
-      diffCanvas.width = width;
-      diffCanvas.height = height;
-
-      const img1 = img1Ctx.getImageData(0, 0, width, height);
-      const img2 = img2Ctx.getImageData(0, 0, width, height);
-      const diff = diffCtx.createImageData(width, height);
-
-      const diffCount = pixelmatch(
-        img1.data,
-        img2.data,
-        diff.data,
-        width,
-        height,
-        { threshold: 0.1 }
-      );
-
-
-      diffCtx.putImageData(diff, 0, 0);
-      page.diffImage = diffCanvas.toDataURL();
-      page.diffPercent = diffCount;
-      page.status = "done";
-      Promise.resolve()
-    })
-  )
-
-  setTimeout(() => {
-    setLoading(false)
-  }, 0);
-
+  waitForPaint(async () => {
+    await Promise.all(
+      selectedPages.value.map(async (page) => {
+        await diffPage(page)
+      })
+    )
+    loading.value = false
+  })
 }
 
 const selectAll = () => {
@@ -166,32 +176,39 @@ async function setLoading(value) {
 }
 
 async function snapshotBaseline() {
-  selectedPages.value.map(page => {
-    page.status = 'Snapshotting Baselines...'
-  })
-
-  for (const page in selectedPages.value) {
-    if (page % 2 === 0) {
-      console.log('sleeping');
-      await sleep()
-      console.log('resuming');
+  loading.value = true
+  waitForPaint(async () => {
+    selectedPages.value.map(page => {
+      page.status = 'Snapshotting Baselines...'
+    })
+    for (const page in selectedPages.value) {
+      if (page > 0 && page % 2 === 0) {
+        console.log('sleeping');
+        await sleep()
+        console.log('resuming');
+      }
+      dispatch("snapshotBaseline", selectedPages.value[page].nodeId)
     }
-    dispatch("snapshotBaseline", selectedPages.value[page].nodeId)
-  }
+    loading.value = false
+  })
 }
 
 async function snapshotComparison() {
-  selectedPages.value.map(page => {
-    page.status = 'Snapshotting Comparisions...'
-  })
+  loading.value = true
+  waitForPaint(async () => {
 
-  for (const page in selectedPages.value) {
-    if (page % 2 === 0) {
-      await sleep()
+    selectedPages.value.map(page => {
+      page.status = 'Snapshotting Comparisions...'
+    })
+
+    for (const page in selectedPages.value) {
+      if (page > 0 && page % 2 === 0) {
+        await sleep()
+      }
+      dispatch("snapshotComparision", selectedPages.value[page].nodeId)
     }
-    dispatch("snapshotComparision", selectedPages.value[page].nodeId)
-  }
-
+    loading.value = false
+  })
 }
 
 async function sleep(ms = 0) {

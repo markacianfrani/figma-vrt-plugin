@@ -1,14 +1,17 @@
 <template>
 	<div class>
-		<div class="cursor-pointer flex items-center text-xxs">
+		<div class="flex items-center text-xxs">
 			<div @click="toggle" :class="[!isOpen ? 'icon--caret-right' : 'icon--caret-down']" class="icon"></div>
 			<div class="icon-button mr-2" @click.prevent="togglePageVisibility">
 				<div :class="page.isVisible ? 'icon--visible' : 'icon--hidden'" class="icon"></div>
 			</div>
 			
+			<span :class="{'text-secondary' : !page.isVisible}">
+
 			{{page.name}}
+			</span>
 			<div class="ml-auto mr-4">
-				<span v-if="page.status !== 'done'" class="text-gray-400">{{ page.status }}</span>
+				<span v-if="page.isVisible && page.status !== 'done'" class="text-gray-400">{{ page.status }}</span>
 				<span
 					v-if="page.status === 'done'"
 					:class="[page.diffPercent > 0 ? 'bg-red-500' : 'bg-green-500']"

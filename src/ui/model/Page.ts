@@ -15,9 +15,9 @@ export interface PageI {
 	baselineImage: string | null = null
 	comparisionImage: string | null = null
 	diffImage: string | null = null
-	status = 'waiting'
+	status = 'Waiting for Baseline'
 	diffPercent = 0
-	isVisible = false
+	isVisible = true
       
       
 	constructor(name: string, nodeId: string) {

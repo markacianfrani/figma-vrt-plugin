@@ -5,7 +5,6 @@ module.exports = {
     "./src/ui/ui.vue",
     "./src/**/*.{vue,js,ts,jsx,tsx}",
   ],
-  important: true,
   theme: {
 
     fontSize: {
