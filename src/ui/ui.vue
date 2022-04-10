@@ -11,7 +11,6 @@
             type="number"
             step=".10"
             class="input__field"
-            value="0.1"
           />
         </div>
       </div>
