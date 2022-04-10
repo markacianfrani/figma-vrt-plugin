@@ -1,6 +1,22 @@
 <template>
   <div id="ui" class="h-screen flex flex-col justify-between">
-    <tab-strip @select-all="selectAll" @select-none="selectNone"></tab-strip>
+    <div class="flex items-center">
+      <tab-strip @select-all="selectAll" @select-none="selectNone"></tab-strip>
+      <div class="ml-auto flex items-center pr-xs py-xs">
+        <label class="mr-2 text-secondary">Threshold</label>
+        <div class="input w-16">
+          <input
+            v-model="threshold"
+            max="1"
+            type="number"
+            step=".10"
+            class="input__field"
+            value="0.1"
+          />
+        </div>
+      </div>
+    </div>
+
     <main class="mb-auto overflow-auto">
       <ul>
         <li v-for="page in pages" :key="page.nodeId" class="border border-b-gray-300">
@@ -25,26 +41,26 @@
       <div class="flex items-center">
         <button
           @click.prevent="snapshotBaseline"
-          :disabled="loading"
+          :disabled="loading || !hasSelection"
           class="button"
           :class="hasBaseline ? 'button--secondary' : 'button--primary'"
         >{{ !hasBaseline ? 'Take Baseline Snapshot' : 'Rerun Baseline' }}</button>
         <div class="m-auto flex items-center" v-if="loading">
-            <div class="text-white icon icon--spinner icon--spin"></div>
-          Loading...
-          <span class="italic text-secondary ml-2">This may take a hot minute if you have a lot of pages.</span>
-
+          <div class="text-white icon icon--spinner icon--spin"></div>Loading...
+          <span
+            class="italic text-secondary ml-2"
+          >This may take a hot minute if you have a lot of pages.</span>
         </div>
-        <div class="flex items-center" :class="{ 'ml-auto': !loading}">
+        <div class="flex items-center" :class="{ 'ml-auto': !loading }">
           <button
             @click.prevent="snapshotComparison"
-            :disabled="loading || !hasBaseline"
+            :disabled="loading || !hasBaseline || !hasSelection"
             class="text-white button button--primary mr-4"
           >Take Snapshot</button>
 
           <button
             @click="goDiff"
-            :disabled="loading || !hasBaseline || !hasComparision"
+            :disabled="loading || !hasBaseline || !hasComparision || !hasSelection"
             class="text-white button button--primary"
             :class="{ 'bg-green-500': hasBaseline && hasComparision }"
           >Compare Snapshots</button>
@@ -77,11 +93,15 @@ import {
 } from 'vue';
 
 const canvasReferences = ref([])
+const threshold = ref(0.1)
 const pageSet = reactive(new PageSet())
 let pages = computed(() => {
   return pageSet.pages
 })
 
+const hasSelection = computed(() => {
+  return selectedPages.value.length > 0
+})
 
 const hasBaseline = computed(() => {
   const pagesWithBaselines = selectedPages.value.filter(page => !page.baselineImage)
@@ -117,13 +137,20 @@ const diffPage = (page) => {
     const img2 = img2Ctx.getImageData(0, 0, width, height);
     const diff = diffCtx.createImageData(width, height);
 
+    let diffThreshold = threshold.value
+    if (threshold.value > 1) {
+      diffThreshold = 1
+    }
+    if (threshold.value < 0) {
+      diffThreshold = 0
+    }
     const diffCount = pixelmatch(
       img1.data,
       img2.data,
       diff.data,
       width,
       height,
-      { threshold: 0.1 }
+      { threshold: diffThreshold }
     );
 
 
@@ -254,7 +281,12 @@ onMounted(async () => {
     const page = pages.value.find(page => page.nodeId === figmaData.nodeId)
     page.setComparisionImage(figmaData.image)
     page.status = 'Comparision loaded'
-    draw(page, 'comparision')
+    waitForPaint(async () => {
+      await draw(page, 'comparision')
+      console.log('page', page.comparisionImage);
+      diffPage(page)
+    })
+
   });
 
   handleEvent("pagesFetched", figmaData => {
