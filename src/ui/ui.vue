@@ -8,6 +8,7 @@
           <input
             v-model="threshold"
             max="1"
+            min="0.1"
             type="number"
             step=".10"
             class="input__field"
@@ -209,9 +210,7 @@ async function snapshotBaseline() {
     })
     for (const page in selectedPages.value) {
       if (page > 0 && page % 2 === 0) {
-        console.log('sleeping');
         await sleep()
-        console.log('resuming');
       }
       dispatch("snapshotBaseline", selectedPages.value[page].nodeId)
     }
@@ -282,8 +281,6 @@ onMounted(async () => {
     page.status = 'Comparision loaded'
     waitForPaint(async () => {
       await draw(page, 'comparision')
-      console.log('page', page.comparisionImage);
-      diffPage(page)
     })
 
   });
