@@ -1,18 +1,14 @@
 <template>
   <div id="ui" class="h-screen flex flex-col justify-between">
     <div class="flex items-center">
+      <button @click="open = true">open</button>
+      <FigmaDialog :open="open" @accept="syncMode = true; open = false" @deny="syncMode = false; open = false"></FigmaDialog>
+      
       <tab-strip @select-all="selectAll" @select-none="selectNone"></tab-strip>
       <div class="ml-auto flex items-center pr-xs py-xs">
         <label class="mr-2 text-secondary">Threshold</label>
         <div class="input w-16">
-          <input
-            v-model="threshold"
-            max="1"
-            min="0.1"
-            type="number"
-            step=".10"
-            class="input__field"
-          />
+          <input v-model="threshold" max="1" min="0.1" type="number" step=".10" class="input__field" />
         </div>
       </div>
     </div>
@@ -21,49 +17,34 @@
       <ul>
         <li v-for="page in pages" :key="page.nodeId" class="border border-b-gray-300">
           <page-item :page="page">
-            <canvas
-              :ref="el => { canvasReferences[`${page.nodeId}-baseline`] = el }"
-              class="hidden border"
-            ></canvas>
-            <canvas
-              :ref="el => { canvasReferences[`${page.nodeId}-comparision`] = el }"
-              class="hidden border"
-            ></canvas>
-            <canvas
-              :ref="el => { canvasReferences[`${page.nodeId}-diff`] = el }"
-              class="max-w-full m-auto"
-            ></canvas>
+            <canvas :ref="el => { canvasReferences[`${page.nodeId}-baseline`] = el }" class="hidden border"></canvas>
+            <canvas :ref="el => { canvasReferences[`${page.nodeId}-comparision`] = el }" class="hidden border"></canvas>
+            <canvas :ref="el => { canvasReferences[`${page.nodeId}-diff`] = el }" class="max-w-full m-auto"></canvas>
           </page-item>
         </li>
       </ul>
     </main>
     <footer class="p-xs">
       <div class="flex items-center">
-        <button
-          @click.prevent="snapshotBaseline"
-          :disabled="loading || !hasSelection"
-          class="button"
-          :class="hasBaseline ? 'button--secondary' : 'button--primary'"
-        >{{ !hasBaseline ? 'Take Baseline Snapshot' : 'Rerun Baseline' }}</button>
+        <button class="button button--primary mr-4" @click.prevent="test">test</button>
+        <button class="button button--primary mr-4" @click.prevent="push">push</button>
+        <button class="button button--primary mr-4" @click.prevent="query">query</button>
+        <button @click.prevent="snapshotBaseline" :disabled="loading || !hasSelection" class="button"
+          :class="hasBaseline ? 'button--secondary' : 'button--primary'">{{
+            !hasBaseline ? 'Take Baseline Snapshot' :
+              'Rerun Baseline'
+          }}</button>
         <div class="m-auto flex items-center" v-if="loading">
           <div class="text-white icon icon--spinner icon--spin"></div>Loading...
-          <span
-            class="italic text-secondary ml-2"
-          >This may take a hot minute if you have a lot of pages.</span>
+          <span class="italic text-secondary ml-2">This may take a hot minute if you have a lot of pages.</span>
         </div>
         <div class="flex items-center" :class="{ 'ml-auto': !loading }">
-          <button
-            @click.prevent="snapshotComparison"
-            :disabled="loading || !hasBaseline || !hasSelection"
-            class="text-white button button--primary mr-4"
-          >Take Snapshot</button>
+          <button @click.prevent="snapshotComparison" :disabled="loading || !hasBaseline || !hasSelection"
+            class="text-white button button--primary mr-4">Take Snapshot</button>
 
-          <button
-            @click="goDiff"
-            :disabled="loading || !hasBaseline || !hasComparision || !hasSelection"
-            class="text-white button button--primary"
-            :class="{ 'bg-green-500': hasBaseline && hasComparision }"
-          >Compare Snapshots</button>
+          <button @click="goDiff" :disabled="loading || !hasBaseline || !hasComparision || !hasSelection"
+            class="text-white button button--primary" :class="{ 'bg-green-500': hasBaseline && hasComparision }">Compare
+            Snapshots</button>
         </div>
       </div>
     </footer>
@@ -76,7 +57,9 @@ import pixelmatch from 'pixelmatch'
 import TabStrip from './components/TabStrip.vue'
 import { PageSet } from './model/PageSet'
 import { Page } from './model/Page'
+import { MockPage } from './model/mockPage'
 import PageItem from './components/PageItem.vue'
+import { SnapshotType } from './model/CanvasTestFrame'
 
 import {
   dispatch,
@@ -91,7 +74,10 @@ import {
   nextTick,
   computed
 } from 'vue';
+import FigmaDialog from './components/FigmaDialog.vue';
 
+const open = ref(false)
+const syncMode = true
 const canvasReferences = ref([])
 const threshold = ref(0.1)
 const pageSet = reactive(new PageSet())
@@ -163,6 +149,7 @@ const diffPage = (page) => {
 
 }
 
+
 /**
  * Double requestAnimationFrame
  * @param {} callback 
@@ -174,6 +161,31 @@ const waitForPaint = (callback) => {
 }
 
 dispatch("fetchPages");
+
+const test = () => {
+  dispatch('setup', selectedPages.value.map(page => page.nodeId))
+  // dispatch('build')
+}
+
+const push = () => {
+  // dispatch('push', JSON.parse(JSON.stringify(pageSet)))
+  selectedPages.value.map(page => {
+    if (page.baselineImage) {
+      sendToDocument(page, SnapshotType.BASELINE)
+    }
+
+    if (page.comparisionImage) {
+      sendToDocument(page, SnapshotType.COMPARISION)
+    }
+  })
+  // dispatch('build')
+}
+
+const query = () => {
+  dispatch('query', selectedPages.value.map(page => page.name))
+}
+
+
 const goDiff = async () => {
   loading.value = true
 
@@ -181,6 +193,11 @@ const goDiff = async () => {
     await Promise.all(
       selectedPages.value.map(async (page) => {
         await diffPage(page)
+        dispatch("paint", {
+          snapshotType: 'Diff',
+          pageName: page.name,
+          image: page.diffImage
+        })
       })
     )
     loading.value = false
@@ -256,11 +273,31 @@ async function draw(page, context = 'baseline') {
 
     if (context === "diff") {
       url = URL.createObjectURL(new Blob([page.diffImage]));
+      // dispatch("paint", JSON.parse(JSON.stringify(page)))
     }
 
     baselineImage.src = url
+
     resolve();
   });
+}
+
+const sendToDocument = (page, type) => {
+  if (syncMode) {
+    let image = ''
+    if (type === 'Baseline') {
+      image = page.baselineImage
+    }
+    if (type === 'Comparision') {
+      image = page.comparisionImage
+    }
+
+    dispatch("paint", {
+      snapshotType: type,
+      pageName: page.name,
+      image: image
+    })
+  }
 }
 
 onBeforeUpdate(() => {
@@ -268,12 +305,61 @@ onBeforeUpdate(() => {
 });
 
 onMounted(async () => {
-  handleEvent("baselineSnapshotsFetched", figmaData => {
+  // const page = new MockPage()
+  // pageSet.addPage(page)
+
+  handleEvent("baselinePainted", figmaData => {
+    console.log('heard baseline paint');
+  });
+
+  handleEvent("importSnapshotFromDocument", figmaData => {
+    console.log('heard import', figmaData);
+
+    const page = pages.value.find(page => page.name === figmaData.name)
+    if (!page) {
+      throw new Error('cant find page')
+    }
+    if (figmaData.type === SnapshotType.BASELINE) {
+
+      page.setBaselineImage(figmaData.image)
+      page.status = 'Baseline loaded'
+      draw(page, 'baseline')
+    }
+
+    if (figmaData.type === SnapshotType.COMPARISION) {
+      page.setComparisionImage(figmaData.image)
+      page.status = 'Comparision loaded'
+      draw(page, 'comparision')
+    }
+
+
+  });
+
+  handleEvent("diffPainted", figmaData => {
+    console.log('heard diff paint');
+  });
+
+  handleEvent("setupComplete", figmaData => {
+    const page = pages.value.find(page => page.nodeId === figmaData.page)
+    if (page) {
+      page.setFrameId(figmaData.frameId)
+      // page.setBaselineImageNodeId(figmaData.baselineId)
+    } else {
+      console.log('page not found', figmaData.page);
+    }
+    // const page = pages.value.find(page => page.nodeId === figmaData.nodeId)
+    // page.setBaselineImageNodeId(figmaData.rect.id)
+  });
+
+  handleEvent("baselineSnapshotsFetched", async (figmaData) => {
     const page = pages.value.find(page => page.nodeId === figmaData.nodeId)
     page.setBaselineImage(figmaData.image)
     page.status = 'Baseline loaded'
-    draw(page, 'baseline')
+    await draw(page, 'baseline')
+    // sendToDocument(page, 'Baseline')
   });
+
+
 
   handleEvent("comparisionSnapshotsFetched", async (figmaData) => {
     const page = pages.value.find(page => page.nodeId === figmaData.nodeId)
@@ -281,11 +367,13 @@ onMounted(async () => {
     page.status = 'Comparision loaded'
     waitForPaint(async () => {
       await draw(page, 'comparision')
+      // sendToDocument(page, 'Comparision')
     })
 
   });
 
   handleEvent("pagesFetched", figmaData => {
+    console.log(figmaData);
     figmaData.map(pageData => {
       const page = new Page(pageData.name, pageData.nodeId)
       pageSet.addPage(page)

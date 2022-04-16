@@ -1,38 +1,167 @@
 import { dispatch, handleEvent } from './codeMessageHandler';
 figma.showUI(__html__, { width: 900, height: 900 });
+import { DesignClient } from './DesignClient'
+import { CanvasTestFrame } from './ui/model/CanvasTestFrame';
+import { CanvasTestPage } from './ui/model/CanvasTestPage';
+import { SnapshotType } from './ui/model/CanvasTestFrame';
+
+const client = new DesignClient()
+const TestPage = new CanvasTestPage()
 
 figma.ui.onmessage = async (message) => {
-	
-	if (message.action === 'fetchPages') {
-		const pages = figma.root.children.map(async(page) => {
-			return {
-				name: page.name,
-				nodeId: page.id,
+	if (message.action === 'push') {
+		// check if test page exists and do something
+		if (TestPage.pageFrames.length < 1) {
+			console.error('Need frames');
+		}
+		const frames = TestPage.pageFrames
+		const pluginFrames = message.data
+		frames.map(frame => {
+			const pluginFrame = pluginFrames._pages.find(page => page.name === frame.name)
+			if (!pluginFrame) {
+				console.error('cant find pluginframe');
 			}
 
+			frame.paintSnapshot(SnapshotType.BASELINE, pluginFrame.baselineImage)
+		})
+		
+
+
+
+	}
+
+	if (message.action === 'query') {
+		// check if test page exists and do something
+		if (TestPage.pageFrames.length < 1) {
+			console.error('Need frames');
+		}
+
+		const pageFrames = TestPage.pageFrames;
+		pageFrames.map(async (pageFrame) => {
+			const hasBaseline = pageFrame.snapshotIsPainted(SnapshotType.BASELINE)
+			if (hasBaseline) {
+				const imageFrame = await pageFrame.getSnapshotImageFrame(SnapshotType.BASELINE)
+				const image = await imageFrame.exportAsync({
+					format: "PNG",
+					constraint: {
+						type: "WIDTH",
+						value: 1048
+					}
+				})
+				dispatch('importSnapshotFromDocument', {
+					name: pageFrame.name,
+					type: SnapshotType.BASELINE,
+					image: image
+				})
+
+			}
+
+			const hasComparision = pageFrame.snapshotIsPainted(SnapshotType.COMPARISION)
+			if (hasComparision) {
+				const imageFrame = await pageFrame.getSnapshotImageFrame(SnapshotType.COMPARISION)
+				const image = await imageFrame.exportAsync({
+					format: "PNG",
+					constraint: {
+						type: "WIDTH",
+						value: 1048
+					}
+				})
+				dispatch('importSnapshotFromDocument', {
+					name: pageFrame.name,
+					type: SnapshotType.COMPARISION,
+					image: image
+				})
+
+			}
 		})
 
-		const result = await Promise.all(pages)
+	}
+	if (message.action === 'setup') {
+		let testPage = client.findOrCreatePage('_test')
+		let position = 0
+		const pages = figma.root.children.filter(node => message.data.includes(node.id))
+		pages.map(async (page) => {
+
+			let frame = client.findOrCreateFrame(page.name, testPage)
+			const canvasFrame = new CanvasTestFrame(frame, page.name)
+			canvasFrame.initialize()
+			TestPage.addFrame(canvasFrame)
+
+			frame.y = position
+			position = position + 2000
+
+			testPage.appendChild(frame)
+
+
+			console.log('frames', TestPage.pageFrames);
+
+			dispatch('setupComplete', {
+				page: page.id,
+				frameId: frame.id,
+			})
+		})
+
+
+
+
+	}
+
+	if (message.action === 'paint') {
+		// check if canvas page isnt set and do something about it.
+		const page = figma.root.children.find(node => node.name === "_test")
+		const { snapshotType, image, pageName } = message.data
+
+		if (!page) {
+			throw new Error('cant find page')
+		}
+		try {
+			const frame = TestPage.pageFrames.find(frame => frame.name === pageName)
+			const result = await frame.paintSnapshot(snapshotType, image)
+			dispatch('baselinePainted', result)
+		} catch (e) {
+			console.error(e);
+
+		}
+	}
+
+
+
+	if (message.action === 'fetchPages') {
+		const result = await client.fetchPages()
 		dispatch('pagesFetched', result)
 	}
 
 	if (message.action === 'snapshotBaseline') {
 		const page = figma.root.children.find(node => node.id === message.data)
-		const image = await page.exportAsync()
+		const image = await page.exportAsync({
+			format: "PNG",
+			constraint: {
+				type: "WIDTH",
+				value: 3048
+			}
+		})
 		dispatch('baselineSnapshotsFetched', {
-				name: page.name,
-				nodeId: page.id,
-				image: image
+			name: page.name,
+			nodeId: page.id,
+			image: image
 		})
 	}
 
 	if (message.action === 'snapshotComparision') {
 		const page = figma.root.children.find(node => node.id === message.data)
-		const image = await page.exportAsync()
+		const image = await page.exportAsync(
+			{
+				format: "PNG",
+				constraint: {
+					type: "WIDTH",
+					value: 3048
+				}
+			}
+		)
 		dispatch('comparisionSnapshotsFetched', {
-				name: page.name,
-				nodeId: page.id,
-				image: image
+			name: page.name,
+			nodeId: page.id,
+			image: image
 		})
 
 	}

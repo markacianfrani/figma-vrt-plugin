@@ -7,7 +7,8 @@
 		"dev": "webpack --mode=development --watch",
 		"build": "webpack --mode=production",
 		"preview": "live-server --entry-file='livepreview.html'",
-		"livereload": "nodemon --watch src/ui --exec ./run-plugin.sh"
+		"livereload": "nodemon --watch src/ui --exec ./run-plugin.sh",
+		"vite": "vite"
 	},
 	"dependencies": {
 		"@vue/compiler-sfc": "^3.0.2",
@@ -15,8 +16,9 @@
 		"pixelmatch": "^5.2.1"
 	},
 	"devDependencies": {
+		"@vitejs/plugin-vue": "^2.3.1",
 		"@figma/plugin-typings": "^1.18.2",
-		"@types/node": "^12.0.5",
+		"@types/node": "^12.20.48",
 		"autoprefixer": "^10.4.4",
 		"css-loader": "^2.1.1",
 		"html-webpack-inline-source-plugin": "0.0.10",

@@ -13,22 +13,33 @@ export interface PageI {
 	name = "";
 	nodeId = "";
 	baselineImage: string | null = null
+	baselineImageNodeId: string | null = null
 	comparisionImage: string | null = null
 	diffImage: string | null = null
 	status = 'Waiting for Baseline'
 	diffPercent = 0
 	isVisible = true
+	frameId: string = null
       
       
 	constructor(name: string, nodeId: string) {
 	  this.name = name;
 	  this.nodeId = nodeId;
 	}
+
+
+	setFrameId(image: string) {
+		this.frameId = image
+	}
       
 	setBaselineImage(image: string) {
 	  this.baselineImage = image
 	}
       
+	setBaselineImageNodeId(nodeId: string) {
+		this.baselineImageNodeId = nodeId
+	}
+
 	clearBaselineImage() {
 	  this.baselineImage = null
 	}

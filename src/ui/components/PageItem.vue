@@ -37,6 +37,7 @@
 </template>
 
 <script setup>
+import { stringify } from 'querystring';
 import {
 	defineProps,
 	onMounted,
@@ -46,7 +47,7 @@ import {
 	useSlots,
 	computed
 } from 'vue';
-import { PageI } from '../model/Page'
+// import { PageI } from '../model/Page'
 
 const emit = defineEmits(['selectPage'])
 const isOpen = ref(false)
@@ -57,7 +58,7 @@ function toggle() {
 
 
 const props = defineProps({
-	page: PageI,
+	page: Object,
 	selected: Boolean = false
 })
 
