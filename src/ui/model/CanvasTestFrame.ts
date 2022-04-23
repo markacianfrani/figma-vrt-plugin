@@ -21,31 +21,39 @@ export class CanvasTestFrame {
 	}
 
 	initialize() {
-		this.node.name = this.name
-		this.node.resize(3500, 1200)
-		this.node.layoutMode = 'HORIZONTAL'
-		this.node.paddingTop = 10
-		this.node.paddingLeft = 10
-		this.node.paddingBottom = 10
-		this.node.paddingRight = 10
-		this.node.itemSpacing = 20
-		this.node.primaryAxisAlignItems = "CENTER"
-		this.node.counterAxisAlignItems = 'CENTER'
-		this.initializeSnapshot(SnapshotType.BASELINE)
-		this.initializeSnapshot(SnapshotType.COMPARISION)
-		this.initializeSnapshot(SnapshotType.DIFF)
+		return new Promise(async(resolve, reject) => {
+
+			this.node.name = this.name
+			this.node.resize(3500, 1200)
+			this.node.layoutMode = 'HORIZONTAL'
+			this.node.paddingTop = 10
+			this.node.paddingLeft = 10
+			this.node.paddingBottom = 10
+			this.node.paddingRight = 10
+			this.node.itemSpacing = 20
+			this.node.primaryAxisAlignItems = "CENTER"
+			this.node.counterAxisAlignItems = 'CENTER'
+			await this.initializeSnapshot(SnapshotType.BASELINE)
+			await this.initializeSnapshot(SnapshotType.COMPARISION)
+			await this.initializeSnapshot(SnapshotType.DIFF)
+			resolve(true)
+		})
 	}
 
 	async initializeSnapshot(snapshotType: SnapshotType) {
-		let baselineSnapshotFrame = this.node.children.find(node => node.type === "FRAME" && node.name === snapshotType)
-		if (!baselineSnapshotFrame) {
-			baselineSnapshotFrame = await this.client.createSnapshotFrame(snapshotType) as FrameNode
-		}
-		this.node.appendChild(baselineSnapshotFrame)
+		return new Promise(async (resolve, reject) => {
+
+			let baselineSnapshotFrame = await this.node.children.find(node => node.type === "FRAME" && node.name === snapshotType)
+			if (!baselineSnapshotFrame) {
+				baselineSnapshotFrame = await this.client.createSnapshotFrame(snapshotType) as FrameNode
+				this.node.appendChild(baselineSnapshotFrame)
+			}
+			resolve(baselineSnapshotFrame)
+		})
 	}
 
 	async paintSnapshot(snapshotType: SnapshotType, image) {
-		return new Promise((resolve, reject) => {
+		return new Promise(async (resolve, reject) => {
 
 			let arr = Uint8Array.from(Object.values(image))
 			if (snapshotType === SnapshotType.DIFF) {
@@ -53,10 +61,11 @@ export class CanvasTestFrame {
 				arr = figma.base64Decode(data)
 			}
 
-			let snapshotFrame = this.node.children.find(node => node.name === snapshotType)
+			let snapshotFrame = await this.node.children.find(node => node.name === snapshotType)
 			if (!snapshotFrame) {
-				console.error('could not find frame');
-				reject()
+				console.error('could not find frame', this.node.children);
+				snapshotFrame = await this.initializeSnapshot(snapshotType)
+				// reject()
 			}
 			const snapshotImage = snapshotFrame.children.find(node => node.name === 'Image')
 			if (!snapshotImage) {

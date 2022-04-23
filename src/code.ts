@@ -108,15 +108,32 @@ figma.ui.onmessage = async (message) => {
 
 	if (message.action === 'paint') {
 		// check if canvas page isnt set and do something about it.
-		const page = figma.root.children.find(node => node.name === "_test")
+		const testPage = TestPage.check()
 		const { snapshotType, image, pageName } = message.data
+		const page = figma.root.children.find(node => node.name === pageName) as PageNode
 
-		if (!page) {
-			throw new Error('cant find page')
-		}
+		// if (!testPage) {
+		// 	testPage = client.findOrCreatePage('_test')
+		// 	TestPage.setNode(testPage)
+		// 	// throw new Error('cant find page')
+		// }
 		try {
-			const frame = TestPage.pageFrames.find(frame => frame.name === pageName)
-			const result = await frame.paintSnapshot(snapshotType, image)
+			let figmaFrame = await TestPage.findFrameByName(pageName)
+			// let figmaFrame = TestPage.pageFrames.find(frame => frame.name === pageName)
+			// if (!figmaFrame) {
+			// 	let frame = client.findOrCreateFrame(page.name, testPage)
+			// 	figmaFrame = new CanvasTestFrame(frame, page.name)
+			// 	figmaFrame.initialize()
+			// 	TestPage.addFrame(figmaFrame)
+			// 	testPage.appendChild(frame)
+			// 	// create new frame
+
+			console.log('figma', figmaFrame);
+			
+
+			// }
+			TestPage.alignFrames()
+			const result = await figmaFrame.paintSnapshot(snapshotType, image)
 			dispatch('baselinePainted', result)
 		} catch (e) {
 			console.error(e);
