@@ -46,7 +46,10 @@ export class CanvasTestFrame {
 			let baselineSnapshotFrame = await this.node.children.find(node => node.type === "FRAME" && node.name === snapshotType)
 			if (!baselineSnapshotFrame) {
 				baselineSnapshotFrame = await this.client.createSnapshotFrame(snapshotType) as FrameNode
-				this.node.appendChild(baselineSnapshotFrame)
+				const types = [SnapshotType.BASELINE, SnapshotType.COMPARISION, SnapshotType.DIFF]
+				const typeIndex = types.findIndex(type => type === snapshotType)
+
+				this.node.insertChild(typeIndex, baselineSnapshotFrame)
 			}
 			resolve(baselineSnapshotFrame)
 		})
