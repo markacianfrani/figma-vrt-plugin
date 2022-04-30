@@ -9,6 +9,54 @@ const client = new DesignClient()
 const TestPage = new CanvasTestPage()
 
 figma.ui.onmessage = async (message) => {
+	if (message.action === 'test') {
+		const testPage = client.findOrCreatePage('_test')
+		const pageNames = message.data
+
+		console.log('page', pageNames);
+		
+		pageNames.map(async(page) => {
+			const pageName = page.name
+			console.log('page', page);
+			
+			// let testPageFrame = testPage.children.find(page => page.name === pageName)
+			const testPageFrame = await TestPage.findFrameByName(pageName)
+			console.log('testframe', testPageFrame);
+			
+			if (page.baselineImage) {
+				console.log('[DEBUG] Painting baseline image');
+				testPageFrame.paintSnapshot(SnapshotType.BASELINE, page.baselineImage)
+			}
+
+			if (page.comparisionImage) {
+				console.log('[DEBUG] Painting comparision image');
+				
+				testPageFrame.paintSnapshot(SnapshotType.COMPARISION, page.comparisionImage)
+			}
+			
+			// if (!testPageFrame) {
+			// 	console.log('[DEBUG] Test page frame does not exist. Creating...');
+			// 	testPageFrame = client.findOrCreateFrame(pageName, testPage)
+			// 	testPage.appendChild(testPageFrame)
+			// }
+			// const canvasTestFrame = new CanvasTestFrame(testPageFrame, pageName)
+			// await canvasTestFrame.initialize()
+			
+			// canvasTestFrame.paintSnapshot(page.snapshotType, page.image)
+			// console.log('frame', testPageFrame);
+			
+			// check if page frame exists, if not create. 
+
+			// check if baseline snapshot frame exists, if not create
+
+		})
+		TestPage.alignFrames()
+		console.log('message', message.data);
+		
+
+
+	}
+
 	if (message.action === 'push') {
 		// check if test page exists and do something
 		if (TestPage.pageFrames.length < 1) {

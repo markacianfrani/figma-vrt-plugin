@@ -162,7 +162,22 @@ const waitForPaint = (callback) => {
 dispatch("fetchPages");
 
 const test = () => {
-  dispatch('setup', selectedPages.value.map(page => page.nodeId))
+  dispatch('test', JSON.parse(JSON.stringify(selectedPages.value)))
+  // dispatch('test', selectedPages.value.filter(page => page.baselineImage).map(page => {
+  //   return {
+  //     name: page.name,
+  //     snapshotType: SnapshotType.BASELINE,
+  //     image: page.baselineImage
+  //   }
+  // }))
+
+  //   dispatch('test', selectedPages.value.filter(page => page.comparisionImage).map(page => {
+  //   return {
+  //     name: page.name,
+  //     snapshotType: SnapshotType.COMPARISION,
+  //     image: page.comparisionImage
+  //   }
+  // }))
   // dispatch('build')
 }
 
